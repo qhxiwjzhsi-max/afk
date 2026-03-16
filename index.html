@@ -2,149 +2,84 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AFK King - Leaderboard</title>
-    <!-- Подключаем библиотеку Supabase и красивые шрифты -->
+    <title>AFK LEGENDS</title>
     <script src="https://cdn.jsdelivr.net"></script>
     <link href="https://fonts.googleapis.com" rel="stylesheet">
     <style>
-        body { 
-            margin: 0; 
-            background: #ffffff; 
-            color: #000000; 
-            font-family: 'Inter', sans-serif; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            min-height: 100vh;
-        }
-        
-        .timer-section {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 40px 0;
-        }
-
-        #timer { 
-            font-size: clamp(80px, 20vw, 180px); 
-            font-weight: 800; 
-            font-family: 'JetBrains Mono', monospace; 
-            letter-spacing: -4px;
-            margin: 10px 0;
-        }
-        
-        input { 
-            padding: 12px 20px; 
-            border: 2px solid #000; 
-            border-radius: 0; /* Стильный квадратный дизайн */
-            font-size: 16px;
-            font-weight: 800;
-            text-transform: uppercase;
-            width: 280px;
-            text-align: center;
-            outline: none;
-        }
-
-        .leaderboard-section { 
-            width: 100%; 
-            max-width: 500px; 
-            padding-bottom: 100px;
-        }
-
-        h2 { 
-            text-align: center; 
-            font-weight: 800; 
-            text-transform: uppercase; 
-            font-size: 20px;
-            border-bottom: 4px solid #000;
-            padding-bottom: 10px;
-            margin-bottom: 30px;
-        }
-
-        table { width: 100%; border-collapse: collapse; }
-        td { padding: 12px; border-bottom: 1px solid #eee; }
-        .rank { font-weight: 800; width: 30px; }
-        .name { font-weight: 400; }
-        .time { text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; }
-        
-        .status { font-size: 10px; color: #aaa; margin-top: 10px; text-transform: uppercase; }
+        body { margin: 0; background: #fff; color: #000; font-family: 'Montserrat', sans-serif; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .main { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        #timer { font-size: clamp(60px, 15vw, 150px); font-weight: 800; font-family: 'Roboto Mono', monospace; margin: 20px 0; letter-spacing: -2px; }
+        input { padding: 15px; border: 3px solid #000; font-size: 20px; font-weight: 800; width: 300px; text-align: center; outline: none; text-transform: uppercase; }
+        .board { width: 100%; max-width: 500px; padding: 40px 20px; }
+        h2 { border-bottom: 5px solid #000; padding-bottom: 10px; text-transform: uppercase; }
+        table { width: 100%; border-collapse: collapse; font-size: 18px; }
+        td { padding: 10px; border-bottom: 1px solid #eee; }
+        .time-col { text-align: right; font-family: 'Roboto Mono', monospace; }
     </style>
 </head>
 <body>
 
-    <div class="timer-section">
-        <input type="text" id="username" placeholder="ENTER YOUR NICKNAME" onchange="updateNick()">
-        <div id="timer">00:00:00</div>
-        <div class="status">Live Sync Enabled</div>
-    </div>
+<div class="main">
+    <input type="text" id="username" placeholder="TYPE NICKNAME">
+    <div id="timer">00:00:00</div>
+</div>
 
-    <div class="leaderboard-section">
-        <h2>Top 1000 Legends</h2>
-        <table id="leaderboard">
-            <!-- Data from Supabase will appear here -->
-        </table>
-    </div>
+<div class="board">
+    <h2>TOP 1000</h2>
+    <table id="list"></table>
+</div>
 
 <script>
-    // Твои ключи вставлены правильно:
-    const DB_URL = 'https://dattqgpkagclcpctpvdt.supabase.co';
-    const DB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhdHRxZ3BrYWdjbGNwY3RwdmR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NzQ4MzMsImV4cCI6MjA4OTI1MDgzM30.QoPqZMDuMmmNsIFrsCyw_0g0pPqwFVAb4mtSjM3L2V4';
+    const URL = 'https://dattqgpkagclcpctpvdt.supabase.co';
+    const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhdHRxZ3BrYWdjbGNwY3RwdmR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NzQ4MzMsImV4cCI6MjA4OTI1MDgzM30.QoPqZMDuMmmNsIFrsCyw_0g0pPqwFVAb4mtSjM3L2V4';
     
-    const supabaseClient = supabase.createClient(DB_URL, DB_KEY);
+    let seconds = 0;
+    let supabase;
+    
+    // Пробуем подключить базу, но не падаем если не вышло
+    try {
+        supabase = window.supabase.createClient(URL, KEY);
+    } catch(e) { console.error("Database error"); }
 
-    let sec = 0;
-    let nick = localStorage.getItem('afk_nick') || "";
-    document.getElementById('username').value = nick;
+    const input = document.getElementById('username');
+    input.value = localStorage.getItem('afk_nick') || "";
+    input.oninput = () => localStorage.setItem('afk_nick', input.value);
 
-    function updateNick() {
-        nick = document.getElementById('username').value;
-        localStorage.setItem('afk_nick', nick);
-    }
-
-    // Таймер
+    // ТАЙМЕР - ЗАПУСКАЕТСЯ В ЛЮБОМ СЛУЧАЕ
     setInterval(() => {
-        sec++;
-        const h = Math.floor(sec / 3600).toString().padStart(2, '0');
-        const m = Math.floor((sec % 3600) / 60).toString().padStart(2, '0');
-        const s = (sec % 60).toString().padStart(2, '0');
+        seconds++;
+        const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+        const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+        const s = (seconds % 60).toString().padStart(2, '0');
         document.getElementById('timer').innerText = `${h}:${m}:${s}`;
 
-        // Сохранение каждые 10 секунд
-        if (sec % 10 === 0 && nick.trim() !== "") {
-            saveToDatabase();
+        // Сохранение каждые 10 сек
+        if (seconds % 10 === 0 && input.value.trim() !== "" && supabase) {
+            save();
         }
     }, 1000);
 
-    async function saveToDatabase() {
-        try {
-            await supabaseClient
-                .from('leaderboard')
-                .upsert({ name: nick, seconds_active: sec }, { onConflict: 'name' });
-            fetchBoard();
-        } catch (e) { console.error(e); }
+    async function save() {
+        await supabase.from('leaderboard').upsert({ 
+            name: input.value, 
+            seconds_active: seconds 
+        }, { onConflict: 'name' });
+        load();
     }
 
-    async function fetchBoard() {
-        const { data } = await supabaseClient
-            .from('leaderboard')
-            .select('*')
-            .order('seconds_active', { ascending: false })
-            .limit(1000);
-
+    async function load() {
+        if (!supabase) return;
+        const { data } = await supabase.from('leaderboard').select('*').order('seconds_active', { ascending: false }).limit(1000);
         if (data) {
-            document.getElementById('leaderboard').innerHTML = data.map((u, i) => `
+            document.getElementById('list').innerHTML = data.map((u, i) => `
                 <tr>
-                    <td class="rank">${i + 1}</td>
-                    <td class="name">${u.name}</td>
-                    <td class="time">${Math.floor(u.seconds_active / 60)}m ${u.seconds_active % 60}s</td>
+                    <td>${i+1}. ${u.name}</td>
+                    <td class="time-col">${Math.floor(u.seconds_active/60)}m ${u.seconds_active%60}s</td>
                 </tr>
             `).join('');
         }
     }
-
-    fetchBoard();
+    load();
 </script>
 </body>
 </html>
