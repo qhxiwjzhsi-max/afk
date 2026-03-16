@@ -1,155 +1,150 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>AFK Король</title>
+    <title>AFK King - Leaderboard</title>
+    <!-- Подключаем библиотеку Supabase и красивые шрифты -->
     <script src="https://cdn.jsdelivr.net"></script>
     <link href="https://fonts.googleapis.com" rel="stylesheet">
     <style>
         body { 
             margin: 0; 
-            background: #ffffff; /* Белый фон */
-            color: #000000; /* Чёрный текст */
-            font-family: 'Montserrat', sans-serif; 
+            background: #ffffff; 
+            color: #000000; 
+            font-family: 'Inter', sans-serif; 
             display: flex; 
             flex-direction: column; 
             align-items: center; 
             min-height: 100vh;
         }
         
-        .main-container {
+        .timer-section {
             flex: 1;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            padding: 40px 0;
         }
 
         #timer { 
-            font-size: clamp(60px, 15vw, 150px); /* Адаптивный размер */
+            font-size: clamp(80px, 20vw, 180px); 
             font-weight: 800; 
-            color: #000000; 
-            font-family: 'Roboto Mono', monospace; /* Красивый шрифт для цифр */
-            margin: 20px 0;
-            letter-spacing: -2px;
+            font-family: 'JetBrains Mono', monospace; 
+            letter-spacing: -4px;
+            margin: 10px 0;
         }
         
         input { 
-            padding: 15px; 
-            border-radius: 10px; 
+            padding: 12px 20px; 
             border: 2px solid #000; 
-            background: #fff; 
-            color: #000; 
-            width: 250px; 
-            font-size: 18px;
+            border-radius: 0; /* Стильный квадратный дизайн */
+            font-size: 16px;
+            font-weight: 800;
+            text-transform: uppercase;
+            width: 280px;
             text-align: center;
-            font-family: 'Montserrat', sans-serif;
             outline: none;
         }
 
         .leaderboard-section { 
             width: 100%; 
-            max-width: 600px; 
-            padding: 40px 20px;
-            border-top: 2px solid #eee;
+            max-width: 500px; 
+            padding-bottom: 100px;
         }
 
-        h2 { text-transform: uppercase; letter-spacing: 2px; font-size: 24px; margin-bottom: 30px; }
+        h2 { 
+            text-align: center; 
+            font-weight: 800; 
+            text-transform: uppercase; 
+            font-size: 20px;
+            border-bottom: 4px solid #000;
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
 
         table { width: 100%; border-collapse: collapse; }
-        td, th { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
-        .rank { font-weight: 800; color: #888; width: 40px; }
-        .name { font-weight: 500; }
-        .time-val { font-family: 'Roboto Mono', monospace; font-weight: bold; text-align: right; }
+        td { padding: 12px; border-bottom: 1px solid #eee; }
+        .rank { font-weight: 800; width: 30px; }
+        .name { font-weight: 400; }
+        .time { text-align: right; font-family: 'JetBrains Mono', monospace; font-weight: 700; }
+        
+        .status { font-size: 10px; color: #aaa; margin-top: 10px; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
-    <div class="main-container">
-        <input type="text" id="username" placeholder="ВВЕДИ СВОЙ НИК" onchange="saveName()">
+    <div class="timer-section">
+        <input type="text" id="username" placeholder="ENTER YOUR NICKNAME" onchange="updateNick()">
         <div id="timer">00:00:00</div>
-        <p style="color: #888; font-size: 12px;">АВТОСОХРАНЕНИЕ ВКЛЮЧЕНО</p>
+        <div class="status">Live Sync Enabled</div>
     </div>
 
     <div class="leaderboard-section">
-        <h2>Топ-1000 лидеров</h2>
-        <table id="list">
-            <!-- Сюда будут добавляться игроки -->
+        <h2>Top 1000 Legends</h2>
+        <table id="leaderboard">
+            <!-- Data from Supabase will appear here -->
         </table>
     </div>
 
 <script>
-    // --- ТВОИ ДАННЫЕ ИЗ SUPABASE ---
-    const SUPABASE_URL = 'https://dattqgpkagclcpctpvdt.supabase.co'; 
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhdHRxZ3BrYWdjbGNwY3RwdmR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NzQ4MzMsImV4cCI6MjA4OTI1MDgzM30.QoPqZMDuMmmNsIFrsCyw_0g0pPqwFVAb4mtSjM3L2V4';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // Твои ключи вставлены правильно:
+    const DB_URL = 'https://dattqgpkagclcpctpvdt.supabase.co';
+    const DB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhdHRxZ3BrYWdjbGNwY3RwdmR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2NzQ4MzMsImV4cCI6MjA4OTI1MDgzM30.QoPqZMDuMmmNsIFrsCyw_0g0pPqwFVAb4mtSjM3L2V4';
+    
+    const supabaseClient = supabase.createClient(DB_URL, DB_KEY);
 
-    let seconds = 0;
-    let playerName = localStorage.getItem('afk_player_name') || "";
-    document.getElementById('username').value = playerName;
+    let sec = 0;
+    let nick = localStorage.getItem('afk_nick') || "";
+    document.getElementById('username').value = nick;
 
-    function saveName() {
-        playerName = document.getElementById('username').value;
-        localStorage.setItem('afk_player_name', playerName);
+    function updateNick() {
+        nick = document.getElementById('username').value;
+        localStorage.setItem('afk_nick', nick);
     }
 
-    // ЗАПУСК ТАЙМЕРА (теперь точно пойдет)
-    function startTimer() {
-        setInterval(() => {
-            seconds++;
-            const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
-            const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
-            const s = (seconds % 60).toString().padStart(2, '0');
-            document.getElementById('timer').innerText = `${h}:${m}:${s}`;
+    // Таймер
+    setInterval(() => {
+        sec++;
+        const h = Math.floor(sec / 3600).toString().padStart(2, '0');
+        const m = Math.floor((sec % 3600) / 60).toString().padStart(2, '0');
+        const s = (sec % 60).toString().padStart(2, '0');
+        document.getElementById('timer').innerText = `${h}:${m}:${s}`;
 
-            // Сохраняем в базу каждые 10 секунд, если введен ник
-            if (seconds % 10 === 0 && playerName.trim() !== "") {
-                syncWithDatabase();
-            }
-        }, 1000);
-    }
+        // Сохранение каждые 10 секунд
+        if (sec % 10 === 0 && nick.trim() !== "") {
+            saveToDatabase();
+        }
+    }, 1000);
 
-    async function syncWithDatabase() {
+    async function saveToDatabase() {
         try {
             await supabaseClient
                 .from('leaderboard')
-                .upsert({ name: playerName, seconds_active: seconds }, { onConflict: 'name' });
-            loadLeaderboard();
-        } catch (e) {
-            console.log("Ошибка базы:", e);
-        }
+                .upsert({ name: nick, seconds_active: sec }, { onConflict: 'name' });
+            fetchBoard();
+        } catch (e) { console.error(e); }
     }
 
-    async function loadLeaderboard() {
-        const { data, error } = await supabaseClient
+    async function fetchBoard() {
+        const { data } = await supabaseClient
             .from('leaderboard')
             .select('*')
             .order('seconds_active', { ascending: false })
             .limit(1000);
 
         if (data) {
-            const listElement = document.getElementById('list');
-            listElement.innerHTML = data.map((user, index) => `
+            document.getElementById('leaderboard').innerHTML = data.map((u, i) => `
                 <tr>
-                    <td class="rank">${index + 1}</td>
-                    <td class="name">${user.name}</td>
-                    <td class="time-val">${formatTime(user.seconds_active)}</td>
+                    <td class="rank">${i + 1}</td>
+                    <td class="name">${u.name}</td>
+                    <td class="time">${Math.floor(u.seconds_active / 60)}m ${u.seconds_active % 60}s</td>
                 </tr>
             `).join('');
         }
     }
 
-    function formatTime(s) {
-        const h = Math.floor(s / 3600);
-        const m = Math.floor((s % 3600) / 60);
-        const sec = s % 60;
-        return `${h}ч ${m}м ${sec}с`;
-    }
-
-    // Запускаем всё при загрузке
-    startTimer();
-    loadLeaderboard();
+    fetchBoard();
 </script>
-
 </body>
 </html>
