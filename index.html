@@ -2,96 +2,154 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>AFK King - Лидерборд</title>
+    <title>AFK Король</title>
     <script src="https://cdn.jsdelivr.net"></script>
+    <link href="https://fonts.googleapis.com" rel="stylesheet">
     <style>
-        body { margin: 0; background: #0b0e14; color: #fff; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; }
-        /* Время по центру */
-        .main-timer { height: 60vh; display: flex; flex-direction: column; justify-content: center; align-items: center; }
-        #timer { font-size: 120px; font-weight: 800; color: #00d2ff; text-shadow: 0 0 20px rgba(0,210,255,0.5); }
+        body { 
+            margin: 0; 
+            background: #ffffff; /* Белый фон */
+            color: #000000; /* Чёрный текст */
+            font-family: 'Montserrat', sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            min-height: 100vh;
+        }
         
-        .controls { margin-top: 20px; }
-        input { padding: 12px; border-radius: 8px; border: 1px solid #333; background: #1a1f26; color: white; width: 250px; outline: none; }
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #timer { 
+            font-size: clamp(60px, 15vw, 150px); /* Адаптивный размер */
+            font-weight: 800; 
+            color: #000000; 
+            font-family: 'Roboto Mono', monospace; /* Красивый шрифт для цифр */
+            margin: 20px 0;
+            letter-spacing: -2px;
+        }
         
-        /* Таблица лидеров */
-        .leaderboard-section { width: 90%; max-width: 600px; background: #161b22; padding: 20px; border-radius: 15px; margin-bottom: 50px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        h2 { text-align: center; color: #aaa; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th { text-align: left; color: #555; font-size: 14px; text-transform: uppercase; padding-bottom: 10px; }
-        td { padding: 12px 5px; border-top: 1px solid #21262d; }
-        .rank { color: #8b949e; width: 50px; }
-        .time-val { color: #3fb950; font-weight: bold; text-align: right; }
+        input { 
+            padding: 15px; 
+            border-radius: 10px; 
+            border: 2px solid #000; 
+            background: #fff; 
+            color: #000; 
+            width: 250px; 
+            font-size: 18px;
+            text-align: center;
+            font-family: 'Montserrat', sans-serif;
+            outline: none;
+        }
+
+        .leaderboard-section { 
+            width: 100%; 
+            max-width: 600px; 
+            padding: 40px 20px;
+            border-top: 2px solid #eee;
+        }
+
+        h2 { text-transform: uppercase; letter-spacing: 2px; font-size: 24px; margin-bottom: 30px; }
+
+        table { width: 100%; border-collapse: collapse; }
+        td, th { padding: 15px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+        .rank { font-weight: 800; color: #888; width: 40px; }
+        .name { font-weight: 500; }
+        .time-val { font-family: 'Roboto Mono', monospace; font-weight: bold; text-align: right; }
     </style>
 </head>
 <body>
 
-    <div class="main-timer">
-        <input type="text" id="username" placeholder="Введи свой ник..." onchange="saveName()">
+    <div class="main-container">
+        <input type="text" id="username" placeholder="ВВЕДИ СВОЙ НИК" onchange="saveName()">
         <div id="timer">00:00:00</div>
-        <p style="color: #666;">Прогресс сохраняется автоматически каждые 10 секунд</p>
+        <p style="color: #888; font-size: 12px;">АВТОСОХРАНЕНИЕ ВКЛЮЧЕНО</p>
     </div>
 
     <div class="leaderboard-section">
-        <h2>Топ-1000 долгожителей</h2>
-        <table>
-            <thead><tr><th>#</th><th>Игрок</th><th style="text-align:right">Время (сек)</th></tr></thead>
-            <tbody id="leaderboard-body"><!-- Сюда ИИ вставит строки --></tbody>
+        <h2>Топ-1000 лидеров</h2>
+        <table id="list">
+            <!-- Сюда будут добавляться игроки -->
         </table>
     </div>
 
 <script>
-    // --- ВСТАВЬ СВОИ ДАННЫЕ ТУТ ---
-    const SUPABASE_URL = 'https://dattqgpkagclcpctpvdt.supabase.co';
+    // --- ТВОИ ДАННЫЕ ИЗ SUPABASE ---
+    const SUPABASE_URL = 'https://dattqgpkagclcpctpvdt.supabase.co'; 
     const SUPABASE_KEY = 'sb_publishable_0SI2a5rRDlfIuW9H9k0jQw_TReMs8ve';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let seconds = 0;
-    let name = localStorage.getItem('player_name') || "Аноним";
-    document.getElementById('username').value = name === "Аноним" ? "" : name;
+    let playerName = localStorage.getItem('afk_player_name') || "";
+    document.getElementById('username').value = playerName;
 
     function saveName() {
-        name = document.getElementById('username').value || "Аноним";
-        localStorage.setItem('player_name', name);
+        playerName = document.getElementById('username').value;
+        localStorage.setItem('afk_player_name', playerName);
     }
 
-    // Логика таймера
-    setInterval(() => {
-        seconds++;
-        let h = Math.floor(seconds / 3600).toString().padStart(2, '0');
-        let m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
-        let s = (seconds % 60).toString().padStart(2, '0');
-        document.getElementById('timer').innerText = `${h}:${m}:${s}`;
+    // ЗАПУСК ТАЙМЕРА (теперь точно пойдет)
+    function startTimer() {
+        setInterval(() => {
+            seconds++;
+            const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+            const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+            const s = (seconds % 60).toString().padStart(2, '0');
+            document.getElementById('timer').innerText = `${h}:${m}:${s}`;
 
-        // Автосохранение в базу каждые 10 секунд
-        if (seconds % 10 === 0) updateStats();
-    }, 1000);
+            // Сохраняем в базу каждые 10 секунд, если введен ник
+            if (seconds % 10 === 0 && playerName.trim() !== "") {
+                syncWithDatabase();
+            }
+        }, 1000);
+    }
 
-    async function updateStats() {
-        // Обновляем или вставляем данные (по нику)
-        await supabase.from('leaderboard').upsert(
-            { name: name, seconds_active: seconds }, 
-            { onConflict: 'name' } 
-        );
-        loadLeaderboard();
+    async function syncWithDatabase() {
+        try {
+            await supabaseClient
+                .from('leaderboard')
+                .upsert({ name: playerName, seconds_active: seconds }, { onConflict: 'name' });
+            loadLeaderboard();
+        } catch (e) {
+            console.log("Ошибка базы:", e);
+        }
     }
 
     async function loadLeaderboard() {
-        const { data } = await supabase.from('leaderboard')
+        const { data, error } = await supabaseClient
+            .from('leaderboard')
             .select('*')
             .order('seconds_active', { ascending: false })
             .limit(1000);
 
-        const body = document.getElementById('leaderboard-body');
-        body.innerHTML = data.map((user, index) => `
-            <tr>
-                <td class="rank">${index + 1}</td>
-                <td>${user.name}</td>
-                <td class="time-val">${user.seconds_active}s</td>
-            </tr>
-        `).join('');
+        if (data) {
+            const listElement = document.getElementById('list');
+            listElement.innerHTML = data.map((user, index) => `
+                <tr>
+                    <td class="rank">${index + 1}</td>
+                    <td class="name">${user.name}</td>
+                    <td class="time-val">${formatTime(user.seconds_active)}</td>
+                </tr>
+            `).join('');
+        }
     }
 
-    loadLeaderboard(); // Загрузить при старте
+    function formatTime(s) {
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        return `${h}ч ${m}м ${sec}с`;
+    }
+
+    // Запускаем всё при загрузке
+    startTimer();
+    loadLeaderboard();
 </script>
+
 </body>
 </html>
